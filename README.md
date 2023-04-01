@@ -105,7 +105,7 @@ Full estimation or estimation with truncation can be performed; the estimation i
 
 Both *corr2pcorr.m* and *pcorr2corr.m* require the so-called vine array, which gives the vine structure. It is a lower triangular matrix/triangular array, with non-zero elements below (including) the main diogonal. See the end of *simulations.m* for examples. See J. Dißmann, E.C. Brechmann, C. Czado and D. Kurowicka (2013), *Selecting and estimating regular vine copulae and application to financial returns*, CSDA, 59, 52-69, for more details on vine array
 
-On the parameter constraints for each partial correlation processes: the user may want to modify vine_constr_tree1.m and vine_contr.m, which provide the constraints on the Vine GARCH model. In particular, the upper/lower bounds on the constant 'a' and autoregressive parameter 'b' may be modified, depending on the dataset.
+On the parameter constraints for each partial correlation processes: the user may want to modify *vine_constr_tree1.m* and *vine_contr.m*, which provide the constraints on the Vine GARCH model. In particular, the upper/lower bounds on the constant 'a' and autoregressive parameter 'b' may be modified, depending on the dataset.
 
 # Software requirements
 
