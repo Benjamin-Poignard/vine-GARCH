@@ -7,7 +7,7 @@ Matlab implementation of the vine GARCH model (C-vine) based on the paper:
 Link: https://doi.org/10.1017/S026646661800004X
 
 Alternative variance-covariance models are implemented: 
-- the scalar DCC model: the code builds upon the MFE toolbox of K. Sheppard, https://www.kevinsheppard.com/code/matlab/mfe-toolbox/
+- the scalar DCC model: both full likelihood and composite-likelihood methods are implemented in the second-step objective function. The latter method is based on contiguous overlapping pairs, which builds upon C. Pakel, N. Shephard, K. Sheppard and R.F. Engle (2021) and should be used when the dimension is large (i.e., larger than 200, 300, 400). The DCC-GARCH code builds upon the MFE toolbox of K. Sheppard, https://www.kevinsheppard.com/code/matlab/mfe-toolbox/
 - the average oracle estimator (fixed estimator) of C. Bongiorno, D. Challet and G. Loeper (2023).
 
 # Overview
@@ -121,4 +121,5 @@ The following toolboxes should be installed:
 - C. Bongiorno, D. Challet and G. Loeper (2023), *Filtering time-dependent covariance matrices using time-independent eigenvalues*, Journal of Statistical Mechanics: Theory and Experiment. DOI: 10.1088/1742-5468/acb7ed
 - J. Dißmann, E.C. Brechmann, C. Czado and D. Kurowicka (2013), *Selecting and estimating regular vine copulae and application to financial returns*, Computational Statistics & Data Analysis. DOI: 10.1016/j.csda.2012.08.010
 - I. Gijbels, M. Omelka and N. Veraverbeke (2015), *Partial and average copulas and association measures*, Electronic Journal of Statistics, DOI: 10.1214/15-EJS1077.
+- C. Pakel, N. Shephard, K. Sheppard and R.F. Engle (2021), *Fitting vast dimensional time-varying covariance models*, Journal of Business & Economic Statistics. DOI: 10.1080/07350015.2020.1713795
 - B. Poignard and J.D. Fermanian (2019), *Dynamic asset correlations based on vines*, Econometric Theory. DOI: 10.1017/S026646661800004X
