@@ -16,7 +16,7 @@ The file *simulations.m* illustrates the implemention of the C-vine GARCH model 
 
 *simulations.m* provide the a out-of-sample GMVP-based allocation performances for the different variance-covariance models and based on the data generating process (DGP):
 
-$$z_t = H^{1/2}_t \eta_t, H_t = D_t^{1/2} C_t D_t^{1/2}, \forall k, \eta_{t,k} = \sqrt{\gamma-2}\nu_{t,k}/\sqrt{\gamma}, \nu_{t,k} \sim t(\gamma),$$
+$$z_{t} = H_{t}^{1/2} \eta_{t}, \; H_t = D_{t}^{1/2} C_{t} D_{t}^{1/2}, \forall k, \eta_{t,k} = \sqrt{\gamma-2}\nu_{t,k}/\sqrt{\gamma}, \nu_{t,k} \sim t(\gamma),$$
 
 where $t()$ is a centered Student distribution with $\gamma$ degrees of freedom, $\gamma >2$, $D_t^{1/2} = \text{diag}(\sigma_{t,1},\cdots,\sigma_{t,N}) \in \mathbb{R}^N$ is a diagonal matrix containing the marginal conditional volatility processes that follow a GARCH(1,1), and $(C_t)$ denotes the correlation matrix process. Each model (vine GARCH model, scalar DCC, average oracle and sample variance covariance) are estimated for a given in-sample period; the GMVP weights are computed based on the model estimated in-sample; then, the out-of-sample portfolio returns are computed.
 
