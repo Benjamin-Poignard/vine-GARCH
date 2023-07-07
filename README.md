@@ -67,7 +67,7 @@ for every $t=1,\ldots,T$. The parameters $a_1,b_1,c_1,d_1$ (resp. $a_2,b_2,c_2,d
 
 All these series constitute the components of a lower triangular matrix $K_t$ with ones on the main diagonal. Then, we generate symmetric and positive definite matrices 
 
-$$R_t = K_t K^\top_t, C_t = R^{\star-1/2}_t R_t R^{\star-1/2}_t, R_t = (r_{ij,t}), R^{\star}_t = \text{diag}(r_{11,t},\ldots,r_{NN,t})$$
+$$R_t = K_t K^\top_t, C_t = R_t^{\star-1/2} R_t R_t^{\star-1/2}, R_t = (r_{ij,t}), R_t^{\star} = \text{diag}(r_{11,t},\ldots,r_{NN,t})$$
 
 Initializing each of the GARCH processes randomly and given $z_1$, we simulate the successive values of a multivariate GARCH process with conditional covariance matrices $(H_t)$. Finally, we simulate each $\eta_{t,k}$ independently under a $t(3)$ distribution. 
 
