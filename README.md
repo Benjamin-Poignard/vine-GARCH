@@ -12,6 +12,8 @@ Alternative variance-covariance models are implemented:
 
 # Overview
 
+The file *real_portfolio.m* illustrates the implemention of the C-vine GARCH model based on the MSCI portfolio with DM test and MCS test.
+
 The file *simulations.m* illustrates the implemention of the C-vine GARCH model for a $N$-dimensional vector of observations with/without truncation and is estimated level-by-level in the C-vine tree. Parallel computation is employed in each level of the tree with respect to the corresponding edges, according to Section 3.3 of Poignard and Fermanian (2019).
 
 *simulations.m* provide the a out-of-sample GMVP-based allocation performances for the different variance-covariance models and based on the data generating process (DGP):
