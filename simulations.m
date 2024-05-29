@@ -724,7 +724,6 @@ for t = 2:T
     Correlation(:,:,t) = vech_off(rho(:,t),N);
     
     Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
-    count = 0;
     % Verify whether the positive-definiteness condition is satisfied
     % If not, one may apply:
     % - Method 1: a transformation using (1-b) x St + b x Id, with S the
