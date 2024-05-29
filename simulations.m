@@ -5,7 +5,7 @@
 % DGP 3: sin/cos/constant dynamic correlation matrix
 % DGP 4: autoregressive correlation process
 % DGP 5: scalar DCC correlation process
-% DGP 4: vine GARCH correlation process
+% DGP 6: vine GARCH correlation process
 %% On the selection of the C-vine
 
 % The C-vine can be selected using the following three functions:
