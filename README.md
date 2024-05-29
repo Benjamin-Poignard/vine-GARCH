@@ -83,7 +83,7 @@ $$\rho_{ij,t} = \frac{2}{\pi}\arctan\big(\omega_{ij} + \beta_{ij} \psi(\rho_{ij,
 **(E) Scalar DCC correlation process:**
 
 The correlation matrix process $(C_t)$ is generated according to a scalar DCC dynamic
-$$ Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1}, C_t  =  Q_t^{\ast-1/2} Q_t Q_{t}^{\ast-1/2},$$
+$$Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1}, C_t  =  Q_t^{\ast-1/2} Q_t Q_{t}^{\ast-1/2},$$
 where $\overline{Q}$ is generated as a correlation matrix, $\varepsilon_t$ is the vector of the standardized observations, $\alpha \sim \mathcal{U}(0.1,0.2)$ and $\beta \sim \mathcal{U}(0.6,0.9)$ such that $\alpha+\beta<1$. 
 
 **(F) Vine GARCH correlation process:**
