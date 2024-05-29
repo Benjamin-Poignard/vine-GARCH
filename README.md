@@ -63,7 +63,7 @@ Random choice of $N(N-1)/2$ deterministic processes among the cosinus, sinus, mo
 
 $$a_1 + a_2 \cos(2 \pi t / \alpha), b_1 + b_2 \sin(2 \pi t / \beta), c_1 + c_2 \text{mod}(t / \mu), \, d_1 + d_2 \mathbf{1}_{t>d_3},$$
 
-for every $t=1,\ldots,T$. The parameters $a_1,b_1,c_1,d_1$ (resp. $a_2,b_2,c_2,d_2$) are chosen randomly and independently following a uniform distribution $\mathcal{U}(0.01,0.06)$ (resp. in the uniform distribution in (0.01,0.06), $d_3$ is uniformly sampled in $1,\ldots,T$, and $\alpha,\beta,\mu$ are randomly (equally) selected among the fixed subset $\{600,700,1000,1200,1400\}$. 
+for every $t=1,\ldots,T$. The parameters $a_1,b_1,c_1,d_1$ (resp. $a_2,b_2,c_2,d_2$) are chosen randomly and independently following a uniform distribution $\mathcal{U}(0.01,0.06)$ (resp. in the uniform distribution in $\mathcal{U}(0.01,0.06)$, $d_3$ is uniformly sampled in $1,\ldots,T$, and $\alpha,\beta,\mu$ are randomly (equally) selected among the fixed subset $\{600,700,1000,1200,1400\}$. 
 
 All these series constitute the components of a lower triangular matrix $K_t$ with ones on the main diagonal. Then, we generate symmetric and positive definite matrices 
 
@@ -83,7 +83,7 @@ $$\rho_{ij,t} = \frac{2}{\pi}\arctan\big(\omega_{ij} + \beta_{ij} \psi(\rho_{ij,
 **(E) Scalar DCC correlation process:**
 
 The correlation matrix process $(C_t)$ is generated according to a scalar DCC dynamic
-$$ Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1}, C_t  =  Q_t^{\ast-1/2} Q_t Q^{\ast-1/2}_{t},$$
+$$ Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1}, C_t  =  Q_t^{\ast-1/2} Q_t Q_{t}^{\ast-1/2},$$
 where $\overline{Q}$ is generated as a correlation matrix, $\varepsilon_t$ is the vector of the standardized observations, $\alpha \sim \mathcal{U}(0.1,0.2)$ and $\beta \sim \mathcal{U}(0.6,0.9)$ such that $\alpha+\beta<1$. 
 
 **(F) Vine GARCH correlation process:**
