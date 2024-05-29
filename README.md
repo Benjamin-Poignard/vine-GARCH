@@ -83,7 +83,7 @@ $$\rho_{ij,t} = \frac{2}{\pi}\arctan\big(\omega_{ij} + \beta_{ij} \psi(\rho_{ij,
 **(E) Scalar DCC correlation process:**
 
 The correlation matrix process $(C_t)$ is generated according to a scalar DCC dynamic
-$$ Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1},\;\; C_t  =  Q^{\ast-1/2}_{t} Q_t Q^{\ast-1/2}_{t},$$
+$$ Q_t  =  (1-\alpha-\beta)\overline{Q} +  \alpha \varepsilon_{t-1} \varepsilon^\top_{t-1} + \beta Q_{t-1}, C_t  =  Q_t^{\ast-1/2} Q_t Q^{\ast-1/2}_{t},$$
 where $\overline{Q}$ is generated as a correlation matrix, $\varepsilon_t$ is the vector of the standardized observations, $\alpha \sim \mathcal{U}(0.1,0.2)$ and $\beta \sim \mathcal{U}(0.6,0.9)$ such that $\alpha+\beta<1$. 
 
 **(F) Vine GARCH correlation process:**
@@ -91,7 +91,7 @@ where $\overline{Q}$ is generated as a correlation matrix, $\varepsilon_t$ is th
 The correlation matrix process $(C_t)$ is generated according to a C-vine partial correlation model. The DGP is a C-Vine GARCH dynamic for the $d=N(N-1)/2$ distinct correlation and partial correlation entries $\rho_{ij|L,t}$ of $Pc_t$, the partial correlation process, to deduce the correlation matrix $C_t$ using the re-construction formulas from partial correlations to standard correlation:
 
 $$\Psi(Pc_t) = \Omega + \Xi_1 \Psi(Pc_{t-1}) + \Lambda \zeta_{t-1},$$
-where $\Omega \in \Rb^{d}$ and $\Xi, \Lambda\in \Rb^{d\times d}$, assumed diagonal. We set $\Psi(x) = \tan(\pi x/2)$. The innovation vector $\zeta_t$ is generated according to the ``parametric'' method under the Gaussian assumption.
+where $\Omega \in \mathbb{R}^d$ and $\Xi, \Lambda\in \mathbb{R}^{d\times d}$, assumed diagonal. We set $\Psi(x) = \tan(\pi x/2)$. The innovation vector $\zeta_t$ is generated according to the ``parametric'' method under the Gaussian assumption.
 
 # C-vine selection
 
