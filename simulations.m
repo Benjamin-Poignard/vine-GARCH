@@ -3,7 +3,9 @@
 % DGP 1: one factor DGP
 % DGP 2: two factors DGP
 % DGP 3: sin/cos/constant dynamic correlation matrix
-
+% DGP 4: autoregressive correlation process
+% DGP 5: scalar DCC correlation process
+% DGP 4: vine GARCH correlation process
 %% On the selection of the C-vine
 
 % The C-vine can be selected using the following three functions:
@@ -20,7 +22,7 @@
 % AKT. All other central nodes for each vine tree are set according to this
 % criterion.
 % - select_Cvine_corrcoeff.m: Selection of the central node according to an
-% average sample linear correlation measure (ALC): for each variable 
+% average sample linear correlation measure (ALC): for each variable
 % returns_k, compute its AC w.r.t. all other variables, where AC is:
 % sum_{1 \leq j \leq N, j \neq k}|\corr_{kj}| with \corr_{kj}
 % the sample correlation between returns_k and returns_j. Then the variable
@@ -51,7 +53,7 @@
 % employ paraellel computation for each tree vine level: see Section 3.3 of
 % Poignard and Fermanian (2019), 'Dynamic asset correlations based on
 % vines', Econometric Theory, 35, 167-197
-% 
+%
 % - corr2partial_Cvine.m: performs the mapping from the classic correlation
 % matrix to the partial correlation matrix, where the partial correlation
 % structure, i.e., the sets of conditioning and conditioned variables are
@@ -62,7 +64,7 @@
 % structure, i.e., the sets of conditioning and conditioned variables are
 % given by the C-vine structure, which is deduced from the ordering given
 % in the columns of the data matrix of observations
-% 
+%
 % - corr2pcorr.m: performs the mapping from the classic correlation
 % matrix to the partial correlation matrix, where the partial correlation
 % structure, i.e., the sets of conditioning and conditioned variables are
@@ -76,10 +78,10 @@
 % matrix/triangular array, with non-zero elements below (including) the
 % main diogonal
 % See the end of this script for examples
-% See Dißmann, Brechmann, Czado and Kurowicka (2013), 'Selecting and 
-% estimating regular vine copulae and application to financial returns', 
+% See Dißmann, Brechmann, Czado and Kurowicka (2013), 'Selecting and
+% estimating regular vine copulae and application to financial returns',
 % CSDA, 59, 52-69, for more details on vine array
-% 
+%
 % On the parameter constraints for each partial correlation processes:
 % the user may want to modify vine_constr_tree1.m and vine_contr.m, which
 % provide the constraints on the Vine GARCH model. In particular, the
@@ -149,12 +151,17 @@ for t = 2:T
     clear a
     Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
     % Verify whether the positive-definiteness condition is satisfied
-    % If not, apply a transformation using (1-b) x St + b x Id, with S the
+    % If not, one may apply:
+    % - Method 1: a transformation using (1-b) x St + b x Id, with S the
     % variance-covariance at time t, Id the identity matrix and b the
     % user-specified coefficient of linear combination
+    % - Method 2: set the negative eigenvalues to 0.01
     if (min(eig(Sigma(:,:,t)))<eps)
-        b = 0.01;
-        Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        b = 0;
+        while  (min(eig(Sigma(:,:,t)))<eps)
+            b = b+0.001;
+            Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        end
     end
     
     % Simulate the returns in the Student distribution with gamma degrees
@@ -352,12 +359,17 @@ for t = 2:T
     Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
     
     % Verify whether the positive-definiteness condition is satisfied
-    % If not, apply a transformation using (1-b) x St + b x Id, with S the
+    % If not, one may apply:
+    % - Method 1: a transformation using (1-b) x St + b x Id, with S the
     % variance-covariance at time t, Id the identity matrix and b the
     % user-specified coefficient of linear combination
+    % - Method 2: set the negative eigenvalues to 0.01
     if (min(eig(Sigma(:,:,t)))<eps)
-        b = 0.01;
-        Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        b = 0;
+        while  (min(eig(Sigma(:,:,t)))<eps)
+            b = b+0.001;
+            Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        end
     end
     
     % Simulate the returns in the Student distribution with gamma degrees
@@ -561,6 +573,534 @@ for t = 2:T
     returns(t,:) = (Sigma(:,:,t)^(1/2)*nu_temp')';
     
 end
+clear t
+% Discard the first matrix of Correlation and the first line of returns
+Correlation = Correlation(:,:,2:end); returns = returns(2:end,:); T = length(returns);
+%%%%%%%%%%%%%%%%%%%%%%%%%%% In-sample estimation %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Vine-GARCH model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%% C-Vine-GARCH is considered
+%%%%%%%%%%%%%%  Step 1: select the central node according to AKT
+[node,returns] = select_Cvine_akt(returns);
+
+% Hereafter, work with the re-ordered matrix of observations 'returns' to
+% estimate the C-Vine GARCH and DCC models
+
+% Alternative: average conditional Kendall's tau
+% [node,returns_new] = select_Cvine(returns)
+
+% Alternative: average correlation coefficient
+% [node,returns_new] = select_Cvine_corrcoeff(returns);
+
+% Re-ordering of the indices in the true correlation matrix if the interest
+% is to compare the true correlation processes with the estimated dcc and
+% vine GARCH
+for t = 1:T
+    Correlation(:,:,t) = Correlation(node,node,t);
+end
+
+% Define the in-sample and out-of-sample periods
+T_in = 4000; T_out = T_in+1;
+returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
+
+%%%%%%%%%%%%%% In-sample estimation
+% level: the level up to which the estimation is performed
+% level = 2: the partial correlation processes located in the 2 first
+% levels of the C-vine tree are estimated; the remaining partial
+% correlations are set as their sample partial correlations (computed from
+% the sample correlation matrix and the underlying C-vine tree model)
+level = 2; method = 'truncation';
+[Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%% In-sample estimation
+[parameters_dcc,Rt_dcc,H_in] = dcc_mvgarch(returns_in,'full');
+
+%%%%%%%%%%%%%%%%%%%%%%%%% Out-of-sample evaluation %%%%%%%%%%%%%%%%%%%%%%%%
+% Out-of-sample forecasts for the scalar DCC based
+% univariate GARCH(1,1) processes
+h_oos = zeros(size(returns_out,1),size(returns_out,2));
+index = 1;
+for jj=1:size(returns_out,2)
+    univariateparameters = parameters_dcc(index:index+1+1);
+    [simulatedata,h_oos(:,jj)] = dcc_univariate_simulate(univariateparameters,1,1,returns_out(:,jj));
+    index=index+1+1+1;
+end
+% Generate the out-of-sample conditional GARCH(1,1) variances
+h_oos = sqrt(h_oos); % transform into volatility
+
+% scalar DCC out-of-sample correlation process
+[~,Rt_dcc_oos,~,~] = dcc_mvgarch_process_oos(parameters_dcc,returns_out,returns_in,H_in);
+
+% C-vine GARCH out-of-sample correlation process
+[~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
+
+Hdcc = zeros(N,N,length(returns_out));
+% scalar DCC out-of-sample variance covariance process
+for t = 1:length(returns_out)
+    Hdcc(:,:,t) = diag(h_oos(t,:))*Rt_dcc_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated C-vine out-of-sample correlation process
+Hvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% Average oracle estimator
+train = 500; test = 500; B = 10000;
+Sigma_ao = average_oracle(returns_in,train,test,B);
+w_ao = GMVP(Sigma_ao);
+
+% Sample variance-covariance estimator
+w_sample = GMVP(cov(returns_in));
+
+% Computation of the out-of-sample averaged portfolio return and standard
+% deviation
+% First, obtain the GMVP based portfolio weights
+wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+for t = 1:length(returns_out)
+    wdcc(:,t)= GMVP(Hdcc(:,:,t));
+    wvine(:,t)= GMVP(Hvine(:,:,t));
+end
+
+% Second, obtain the portfolio return series for each variance-covariance
+% based model
+e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+for t = 1:length(returns_out)
+    e1(t) = wdcc(:,t)'*returns_out(t,:)';
+    e2(t) = wvine(:,t)'*returns_out(t,:)';
+    e3(t) = w_ao'*returns_out(t,:)';
+    e4(t) = w_sample'*returns_out(t,:)';
+    e5(t) = sum(returns_out(t,:))/N;
+end
+
+% Out-of-sample performance metrics: average portfolio return and standard
+% deviation
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%% DGP 4: Autoregressive correlation process %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear
+clc
+% Specify the desired dimension and full sample size
+N = 10; T = 5001;
+
+% Define the univariate GARCH(1,1) processes
+hsim2 = zeros(T,N); hsim2(1,:) = 0.005.*ones(1,N);
+hsim = zeros(T,N); hsim(1,:) = sqrt(hsim2(1,:));
+% Define the variance-covariance and correlation matrices
+Sigma = zeros(N,N,T); Correlation = zeros(N,N,T);
+% Simulate the univariate GARCH(1,1) parameters (satisfying the
+% stationarity constraints)
+constant = 0.0001 + (0.009-0.0001)*rand(1,N);
+[a_garch,b_garch] = simulate_garch_param(N);
+% Define the T x N matrix of observations
+returns = zeros(T,N);
+
+% gamma: degree of freedom of the Student distribution
+gamma = 3;
+[alpha,beta,zeta] = simulate_autocorrel_param(N);
+dim = N*(N-1)/2;
+rho = zeros(dim,T); rho_tan = zeros(dim,T);
+eta = zeros(dim,1);
+for t = 2:T
+    
+    hsim2(t,:) = constant + b_garch.*hsim2(t-1,:) + a_garch.*(returns(t-1,:).^2);
+    hsim(t,:) = sqrt(hsim2(t,:));
+    
+    rho_tan(:,t) = alpha + beta.*tan((pi/2).*rho(:,t-1)) + zeta.*eta;
+    rho(:,t) = (2/pi).*atan(rho_tan(:,t));
+    Correlation(:,:,t) = vech_off(rho(:,t),N);
+    
+    Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
+    count = 0;
+    % Verify whether the positive-definiteness condition is satisfied
+    % If not, one may apply:
+    % - Method 1: a transformation using (1-b) x St + b x Id, with S the
+    % variance-covariance at time t, Id the identity matrix and b the
+    % user-specified coefficient of linear combination
+    % - Method 2: set the negative eigenvalues to 0.01
+    if (min(eig(Sigma(:,:,t)))<eps)
+        b = 0;
+        while  (min(eig(Sigma(:,:,t)))<eps)
+            b = b+0.001;
+            Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        end
+    end
+    
+    nu_temp = sqrt(gamma-2)*trnd(gamma,1,N)/sqrt(gamma);
+    returns(t,:) = (Sigma(:,:,t)^(1/2)*nu_temp')';
+    eta = [];
+    for i = 1:N-1
+        for j = i+1:N
+            eta = [eta;(returns(t,i)/hsim(t,i)).*(returns(t,j)/hsim(t,j))];
+        end
+    end
+    
+end
+
+clear t
+% Discard the first matrix of Correlation and the first line of returns
+Correlation = Correlation(:,:,2:end); returns = returns(2:end,:); T = length(returns);
+%%%%%%%%%%%%%%%%%%%%%%%%%%% In-sample estimation %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Vine-GARCH model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%% C-Vine-GARCH is considered
+%%%%%%%%%%%%%%  Step 1: select the central node according to AKT
+[node,returns] = select_Cvine_akt(returns);
+
+% Hereafter, work with the re-ordered matrix of observations 'returns' to
+% estimate the C-Vine GARCH and DCC models
+
+% Alternative: average conditional Kendall's tau
+% [node,returns_new] = select_Cvine(returns)
+
+% Alternative: average correlation coefficient
+% [node,returns_new] = select_Cvine_corrcoeff(returns);
+
+% Re-ordering of the indices in the true correlation matrix if the interest
+% is to compare the true correlation processes with the estimated dcc and
+% vine GARCH
+for t = 1:T
+    Correlation(:,:,t) = Correlation(node,node,t);
+end
+
+% Define the in-sample and out-of-sample periods
+T_in = 4000; T_out = T_in+1;
+returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
+
+%%%%%%%%%%%%%% In-sample estimation
+% level: the level up to which the estimation is performed
+% level = 2: the partial correlation processes located in the 2 first
+% levels of the C-vine tree are estimated; the remaining partial
+% correlations are set as their sample partial correlations (computed from
+% the sample correlation matrix and the underlying C-vine tree model)
+level = 2; method = 'truncation';
+[Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%% In-sample estimation
+[parameters_dcc,Rt_dcc,H_in] = dcc_mvgarch(returns_in,'full');
+
+%%%%%%%%%%%%%%%%%%%%%%%%% Out-of-sample evaluation %%%%%%%%%%%%%%%%%%%%%%%%
+% Out-of-sample forecasts for the scalar DCC based
+% univariate GARCH(1,1) processes
+h_oos = zeros(size(returns_out,1),size(returns_out,2));
+index = 1;
+for jj=1:size(returns_out,2)
+    univariateparameters = parameters_dcc(index:index+1+1);
+    [simulatedata,h_oos(:,jj)] = dcc_univariate_simulate(univariateparameters,1,1,returns_out(:,jj));
+    index=index+1+1+1;
+end
+% Generate the out-of-sample conditional GARCH(1,1) variances
+h_oos = sqrt(h_oos); % transform into volatility
+
+% scalar DCC out-of-sample correlation process
+[~,Rt_dcc_oos,~,~] = dcc_mvgarch_process_oos(parameters_dcc,returns_out,returns_in,H_in);
+
+% C-vine GARCH out-of-sample correlation process
+[~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
+
+Hdcc = zeros(N,N,length(returns_out));
+% scalar DCC out-of-sample variance covariance process
+for t = 1:length(returns_out)
+    Hdcc(:,:,t) = diag(h_oos(t,:))*Rt_dcc_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated C-vine out-of-sample correlation process
+Hvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% Average oracle estimator
+train = 500; test = 500; B = 10000;
+Sigma_ao = average_oracle(returns_in,train,test,B);
+w_ao = GMVP(Sigma_ao);
+
+% Sample variance-covariance estimator
+w_sample = GMVP(cov(returns_in));
+
+% Computation of the out-of-sample averaged portfolio return and standard
+% deviation
+% First, obtain the GMVP based portfolio weights
+wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+for t = 1:length(returns_out)
+    wdcc(:,t)= GMVP(Hdcc(:,:,t));
+    wvine(:,t)= GMVP(Hvine(:,:,t));
+end
+
+% Second, obtain the portfolio return series for each variance-covariance
+% based model
+e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+for t = 1:length(returns_out)
+    e1(t) = wdcc(:,t)'*returns_out(t,:)';
+    e2(t) = wvine(:,t)'*returns_out(t,:)';
+    e3(t) = w_ao'*returns_out(t,:)';
+    e4(t) = w_sample'*returns_out(t,:)';
+    e5(t) = sum(returns_out(t,:))/N;
+end
+
+% Out-of-sample performance metrics: average portfolio return and standard
+% deviation
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% DGP 5: scalar DCC correlation process %%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+clear
+clc
+% Specify the desired dimension and full sample size
+N = 10; T = 5001;
+
+% Define the univariate GARCH(1,1) processes
+hsim2 = zeros(T,N); hsim2(1,:) = 0.005.*ones(1,N);
+hsim = zeros(T,N); hsim(1,:) = sqrt(hsim2(1,:));
+% Define the variance-covariance and correlation matrices
+Sigma = zeros(N,N,T); Correlation = zeros(N,N,T);
+% Simulate the univariate GARCH(1,1) parameters (satisfying the
+% stationarity constraints)
+constant = 0.0001 + (0.009-0.0001)*rand(1,N);
+[a_garch,b_garch] = simulate_garch_param(N);
+% Define the T x N matrix of observations
+returns = zeros(T,N);
+
+% gamma: degree of freedom of the Student distribution
+gamma = 3;
+
+cond = true;
+while cond
+    b = 0.6+(0.9-0.6)*rand(1);
+    a = (0.1+(0.2-0.1)*rand(1));
+    cond = (any(abs(a+b) > 1));
+end
+
+Qbar = simulate_sparse_correlation(N,0);
+Qt=zeros(N,N,T);  Qt(:,:,1)=Qbar; stdresid = zeros(T,N);
+
+for t = 2:T
+    
+    hsim2(t,:) = constant + b_garch.*hsim2(t-1,:) + a_garch.*(returns(t-1,:).^2);
+    hsim(t,:) = sqrt(hsim2(t,:));
+    
+    Qt(:,:,t)=Qbar*(1-a-b) + a*(stdresid(t-1,:)'*stdresid(t-1,:)) + b*Qt(:,:,t-1);
+    Correlation(:,:,t)=Qt(:,:,t)./(sqrt(diag(Qt(:,:,t)))*sqrt(diag(Qt(:,:,t)))');
+    
+    Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
+    
+    nu_temp = sqrt(gamma-2)*trnd(gamma,1,N)/sqrt(gamma);
+    returns(t,:) = (Sigma(:,:,t)^(1/2)*nu_temp')';
+    stdresid(t,:) = returns(t,:)./hsim(t,:);
+    
+end
+
+clear t
+% Discard the first matrix of Correlation and the first line of returns
+Correlation = Correlation(:,:,2:end); returns = returns(2:end,:); T = length(returns);
+%%%%%%%%%%%%%%%%%%%%%%%%%%% In-sample estimation %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Vine-GARCH model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%% C-Vine-GARCH is considered
+%%%%%%%%%%%%%%  Step 1: select the central node according to AKT
+[node,returns] = select_Cvine_akt(returns);
+
+% Hereafter, work with the re-ordered matrix of observations 'returns' to
+% estimate the C-Vine GARCH and DCC models
+
+% Alternative: average conditional Kendall's tau
+% [node,returns_new] = select_Cvine(returns)
+
+% Alternative: average correlation coefficient
+% [node,returns_new] = select_Cvine_corrcoeff(returns);
+
+% Re-ordering of the indices in the true correlation matrix if the interest
+% is to compare the true correlation processes with the estimated dcc and
+% vine GARCH
+for t = 1:T
+    Correlation(:,:,t) = Correlation(node,node,t);
+end
+
+% Define the in-sample and out-of-sample periods
+T_in = 4000; T_out = T_in+1;
+returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
+
+%%%%%%%%%%%%%% In-sample estimation
+% level: the level up to which the estimation is performed
+% level = 2: the partial correlation processes located in the 2 first
+% levels of the C-vine tree are estimated; the remaining partial
+% correlations are set as their sample partial correlations (computed from
+% the sample correlation matrix and the underlying C-vine tree model)
+level = 2; method = 'truncation';
+[Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%% In-sample estimation
+[parameters_dcc,Rt_dcc,H_in] = dcc_mvgarch(returns_in,'full');
+
+%%%%%%%%%%%%%%%%%%%%%%%%% Out-of-sample evaluation %%%%%%%%%%%%%%%%%%%%%%%%
+% Out-of-sample forecasts for the scalar DCC based
+% univariate GARCH(1,1) processes
+h_oos = zeros(size(returns_out,1),size(returns_out,2));
+index = 1;
+for jj=1:size(returns_out,2)
+    univariateparameters = parameters_dcc(index:index+1+1);
+    [simulatedata,h_oos(:,jj)] = dcc_univariate_simulate(univariateparameters,1,1,returns_out(:,jj));
+    index=index+1+1+1;
+end
+% Generate the out-of-sample conditional GARCH(1,1) variances
+h_oos = sqrt(h_oos); % transform into volatility
+
+% scalar DCC out-of-sample correlation process
+[~,Rt_dcc_oos,~,~] = dcc_mvgarch_process_oos(parameters_dcc,returns_out,returns_in,H_in);
+
+% C-vine GARCH out-of-sample correlation process
+[~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
+
+Hdcc = zeros(N,N,length(returns_out));
+% scalar DCC out-of-sample variance covariance process
+for t = 1:length(returns_out)
+    Hdcc(:,:,t) = diag(h_oos(t,:))*Rt_dcc_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated C-vine out-of-sample correlation process
+Hvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% Average oracle estimator
+train = 500; test = 500; B = 10000;
+Sigma_ao = average_oracle(returns_in,train,test,B);
+w_ao = GMVP(Sigma_ao);
+
+% Sample variance-covariance estimator
+w_sample = GMVP(cov(returns_in));
+
+% Computation of the out-of-sample averaged portfolio return and standard
+% deviation
+% First, obtain the GMVP based portfolio weights
+wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+for t = 1:length(returns_out)
+    wdcc(:,t)= GMVP(Hdcc(:,:,t));
+    wvine(:,t)= GMVP(Hvine(:,:,t));
+end
+
+% Second, obtain the portfolio return series for each variance-covariance
+% based model
+e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+for t = 1:length(returns_out)
+    e1(t) = wdcc(:,t)'*returns_out(t,:)';
+    e2(t) = wvine(:,t)'*returns_out(t,:)';
+    e3(t) = w_ao'*returns_out(t,:)';
+    e4(t) = w_sample'*returns_out(t,:)';
+    e5(t) = sum(returns_out(t,:))/N;
+end
+
+% Out-of-sample performance metrics: average portfolio return and standard
+% deviation
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% DGP 6: Vine-GARCH correlation model %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clear
+clc
+% Specify the desired dimension and full sample size
+N = 10; T = 5001; dim = N*(N-1)/2;
+
+% Define the univariate GARCH(1,1) processes
+hsim2 = zeros(T,N); hsim2(1,:) = 0.005.*ones(1,N);
+hsim = zeros(T,N); hsim(1,:) = sqrt(hsim2(1,:));
+% Define the variance-covariance and correlation matrices
+Sigma = zeros(N,N,T); Correlation = zeros(N,N,T); R_partial = zeros(N,N,T);
+% Simulate the univariate GARCH(1,1) parameters (satisfying the
+% stationarity constraints)
+constant = 0.0001 + (0.009-0.0001)*rand(1,N);
+[a_garch,b_garch] = simulate_garch_param(N);
+% Define the T x N matrix of observations
+returns = zeros(T,N);
+
+% gamma: degree of freedom of the Student distribution
+gamma = 3;
+
+N1 = count_correl(N,1);
+N2 = count_correl(N-1,1); N3 = dim-N1-N2;
+
+alpha_1 = (0.01+(0.2-0.01)*rand(N1,1));
+beta_1 = 0.8+(0.99-0.8)*rand(N1,1);
+zeta_1 = (0.001+(0.4-0.001)*rand(N1,1));
+
+alpha_2 = (0.01+(0.05-0.01)*rand(N2,1));
+beta_2 = 0.8+(0.99-0.8)*rand(N2,1);
+zeta_2 = (0.001+(0.1-0.001)*rand(N2,1));
+
+
+alpha_3 = (0.01+(0.02-0.01)*rand(N3,1));
+beta_3 = 0.8+(0.99-0.8)*rand(N3,1);
+zeta_3 = (0.001+(0.05-0.001)*rand(N3,1));
+
+rho = zeros(dim,T); rho_tan = zeros(dim,T);
+eta = zeros(T,dim);
+alpha = [alpha_1;alpha_2;alpha_3]; beta = [beta_1;beta_2;beta_3];
+zeta = [zeta_1;zeta_2;zeta_3];
+
+
+for t = 2:T
+    
+    hsim2(t,:) = constant + b_garch.*hsim2(t-1,:) + a_garch.*(returns(t-1,:).^2);
+    hsim(t,:) = sqrt(hsim2(t,:));
+    
+    rho_tan(:,t) = alpha + beta.*tan((pi/2).*rho(:,t-1)) + zeta.*eta(t-1,:)';
+    rho(:,t) = (2/pi).*atan(rho_tan(:,t));
+    R_partial(:,:,t) = vech_off(rho(:,t),N);
+    Correlation(:,:,t) = partial2corr_Cvine(R_partial(:,:,t));
+    
+    
+    Sigma(:,:,t) = diag(hsim(t,:))*Correlation(:,:,t)*diag(hsim(t,:));
+    
+    nu_temp = sqrt(gamma-2)*trnd(gamma,1,N)/sqrt(gamma);
+    returns(t,:) = (Sigma(:,:,t)^(1/2)*nu_temp')';
+    
+    for i = 1:N-1
+        eta(t,i)=(returns(t,1)./hsim(t,1)).*(returns(t,i+1)./hsim(t,i+1));
+    end
+    
+    temp = projection(returns(t,:),hsim(t,:),Correlation(:,:,t));
+    eta(t,N:end) = temp;
+    
+end
+
 clear t
 % Discard the first matrix of Correlation and the first line of returns
 Correlation = Correlation(:,:,2:end); returns = returns(2:end,:); T = length(returns);
