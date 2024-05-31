@@ -1,4 +1,6 @@
 % Real data analysis: MSCI portfolio
+% The main metric is the SD of the portfolio.
+% It is possible to work with non-centered data ==> set res = Y;
 clear
 clc
 % load the MSCI country stock indexes: 23 assets
@@ -7,11 +9,6 @@ Table = readtable('MSCI.xls');
 data_MSCI = Table{1:end,[2:end]};
 % transform into log-returns
 Y = log(data_MSCI(2:end,:))-log(data_MSCI(1:end-1,:));
-
-reaus = Y(:,1); ref = Y(:,7); reg = Y(:,8); reuk = Y(:,22);
-reus = Y(:,23); rejap = Y(:,13); reit = Y(:,12); regb = Y(:,22);
-resp = Y(:,19); rehk = Y(:,10); resg = Y(:,18); reaut = Y(:,2);
-regr = Y(:,9); rebl = Y(:,3); renl = Y(:,14); refin = Y(:,6);
 
 [T,N] = size(Y); T = T-1;
 X = zeros(T*N,2*N); y = zeros(T*N,N);
