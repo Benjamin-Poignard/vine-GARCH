@@ -336,22 +336,22 @@ for t = 2:T
     
     for ii = 1:N1
         a(ii) = (0.8-0.1*sin(2*pi*t/beta1))/sqrt(2);
-        b(ii) = (0.8-0.1*sin(2*pi*t/beta2))/sqrt(2);
+        aa(ii) = (0.8-0.1*sin(2*pi*t/beta2))/sqrt(2);
     end
     for ii = N1+1:N1+N2
         a(ii) = 0.4-0.3*sin(2*pi*t/beta1);
-        b(ii) = 0.4-0.3*sin(2*pi*t/beta2);
+        aa(ii) = 0.4-0.3*sin(2*pi*t/beta2);
     end
     for ii = N1+N2+1:N
         a(ii) = 0.5*sin(2*pi*t/beta1);
-        b(ii) = 0.5*sin(2*pi*t/beta2);
+        aa(ii) = 0.5*sin(2*pi*t/beta2);
     end
     for ii = 1:N
         for jj = 1:N
             if (ii==jj)
                 Correlation(ii,jj,t) = 1;
             else
-                Correlation(ii,jj,t) = a(ii)*a(jj)+b(ii)*b(jj);
+                Correlation(ii,jj,t) = a(ii)*a(jj)+aa(ii)*aa(jj);
             end
         end
     end
@@ -566,8 +566,11 @@ for t = 2:T
     % variance-covariance at time t, Id the identity matrix and b the
     % user-specified coefficient of linear combination
     if (min(eig(Sigma(:,:,t)))<eps)
-        b = 0.01;
-        Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        b = 0;
+        while  (min(eig(Sigma(:,:,t)))<eps)
+            b = b+0.001;
+            Sigma(:,:,t) = (1-b)*Sigma(:,:,t)+b*eye(N);
+        end
     end
     nu_temp = sqrt(gamma-2)*trnd(gamma,1,N)/sqrt(gamma);
     returns(t,:) = (Sigma(:,:,t)^(1/2)*nu_temp')';
