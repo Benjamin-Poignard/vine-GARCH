@@ -53,7 +53,11 @@
 % employ paraellel computation for each tree vine level: see Section 3.3 of
 % Poignard and Fermanian (2019), 'Dynamic asset correlations based on
 % vines', Econometric Theory, 35, 167-197
-%
+% The innovations are obtained under the parametric Gaussian assumption
+
+% - dynamic_npvine.m: same as dynamic_vine.m, but with non-parametric
+% innovations following Poignard and Fermanian (2019)
+
 % - corr2partial_Cvine.m: performs the mapping from the classic correlation
 % matrix to the partial correlation matrix, where the partial correlation
 % structure, i.e., the sets of conditioning and conditioned variables are
@@ -213,6 +217,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -239,6 +246,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -249,6 +260,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -263,27 +280,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -421,6 +441,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -447,6 +470,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -457,6 +484,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -471,27 +504,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -618,6 +654,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -644,6 +683,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -654,6 +697,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -668,27 +717,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -794,6 +846,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -820,6 +875,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -830,6 +889,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -844,27 +909,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -959,6 +1027,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -985,6 +1056,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -995,6 +1070,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -1009,27 +1090,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 
 %%
@@ -1145,6 +1229,9 @@ returns_in = returns(1:T_in,:); returns_out = returns(T_out:end,:);
 level = 2; method = 'truncation';
 [Rt_vine,Ht_vine,parameters_vine,~] = dynamic_vine(returns_in,method,level);
 
+window_size = 200;
+[Rt_npvine,Ht_npvine,parameters_npvine,~] = dynamic_npvine(returns_in,method,level,window_size);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scalar DCC model %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1171,6 +1258,10 @@ h_oos = sqrt(h_oos); % transform into volatility
 % C-vine GARCH out-of-sample correlation process
 [~,Rt_vine_oos] = Cvine_correlation_process_oos(parameters_vine,returns,T_in,h_oos,returns_out,method,level);
 
+% non-parametric C-vine GARCH out-of-sample correlation process
+[~,Rt_npvine_oos] = npCvine_correlation_process_oos(parameters_npvine,returns,T_in,h_oos,returns_out,window_size,method,level);
+
+
 Hdcc = zeros(N,N,length(returns_out));
 % scalar DCC out-of-sample variance covariance process
 for t = 1:length(returns_out)
@@ -1181,6 +1272,12 @@ end
 Hvine = zeros(N,N,length(returns_out));
 for t = 1:length(returns_out)
     Hvine(:,:,t) = diag(h_oos(t,:))*Rt_vine_oos(:,:,t)*diag(h_oos(t,:));
+end
+
+% truncated non-parametric C-vine out-of-sample correlation process
+Hnpvine = zeros(N,N,length(returns_out));
+for t = 1:length(returns_out)
+    Hnpvine(:,:,t) = diag(h_oos(t,:))*Rt_npvine_oos(:,:,t)*diag(h_oos(t,:));
 end
 
 % Average oracle estimator
@@ -1195,27 +1292,30 @@ w_sample = GMVP(cov(returns_in));
 % deviation
 % First, obtain the GMVP based portfolio weights
 wdcc = zeros(N,length(returns_out)); wvine = zeros(N,length(returns_out));
+wnpvine = zeros(N,length(returns_out));
 for t = 1:length(returns_out)
     wdcc(:,t)= GMVP(Hdcc(:,:,t));
     wvine(:,t)= GMVP(Hvine(:,:,t));
+    wnpvine(:,t)= GMVP(Hnpvine(:,:,t));
 end
 
 % Second, obtain the portfolio return series for each variance-covariance
 % based model
 e1 = zeros(length(returns_out),1); e2 = zeros(length(returns_out),1); e3 = zeros(length(returns_out),1);
-e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1);
+e4 = zeros(length(returns_out),1); e5 = zeros(length(returns_out),1); e6 = zeros(length(returns_out),1);
 for t = 1:length(returns_out)
     e1(t) = wdcc(:,t)'*returns_out(t,:)';
     e2(t) = wvine(:,t)'*returns_out(t,:)';
-    e3(t) = w_ao'*returns_out(t,:)';
-    e4(t) = w_sample'*returns_out(t,:)';
-    e5(t) = sum(returns_out(t,:))/N;
+    e3(t) = wnpvine(:,t)'*returns_out(t,:)';
+    e4(t) = w_ao'*returns_out(t,:)';
+    e5(t) = w_sample'*returns_out(t,:)';
+    e6(t) = sum(returns_out(t,:))/N;
 end
 
 % Out-of-sample performance metrics: average portfolio return and standard
 % deviation
-average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5)];
-sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5)];
+average_return = 252*[mean(e1) mean(e2) mean(e3) mean(e4) mean(e5) mean(e6)];
+sd_return = sqrt(252)*[std(e1) std(e2) std(e3) std(e4) std(e5) std(e6)];
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
