@@ -1,6 +1,6 @@
 # Dynamic vine-GARCH process
 
-Matlab implementation of the vine GARCH model (C-vine) based on the paper:
+Matlab implementation of the vine GARCH model (C-vine, parametric and non-parametric innovations) based on the paper:
 
 *Dynamic asset correlations based on vines*, by Benjamin Poignard and Jean-David Fermanian, 2019, Econometric Theory
 
@@ -118,9 +118,11 @@ Before runing the main function for the C-vine GARCH model *dynamic_vine.m* on r
 
 # C-vine GARCH estimation
 
-- *dynamic_vine.m*: main function to estimate the C-vine GARCH model, where the C-vine has been specified by the user or selected by *select_Cvine.m*, *select_Cvine_akt.m* or *select_Cvine_corrcoeff.m*. If the user has specified the C-vine a priori, the ordering of the data matrix of observations is key to run the estimation algorithm: the first column will be the root of the first tree, the second column will be the root of the second tree given the variable in the first column, the third column will be the root in the third tree given the variables in the two first columns, etc.
+- *dynamic_vine.m*: main function to estimate the C-vine GARCH model under parametric innovations, where the C-vine has been specified by the user or selected by *select_Cvine.m*, *select_Cvine_akt.m* or *select_Cvine_corrcoeff.m*. If the user has specified the C-vine a priori, the ordering of the data matrix of observations is key to run the estimation algorithm: the first column will be the root of the first tree, the second column will be the root of the second tree given the variable in the first column, the third column will be the root in the third tree given the variables in the two first columns, etc.
 
-Full estimation or estimation with truncation can be performed; the estimation is performed edge-by-edge in each tree level, which allows to employ paraellel computation for each tree vine level: see Section 3.3 of Poignard and Fermanian (2019). The truncation level is user-specified: for a given "level" set as input in *dynamic_vine.m*, the algorithm estimates the partial correlation processes up to "level". 
+- *dynamic_npvine.m*: main function to estimate the C-vine GARCH model under non-parametric innovations, where the C-vine has been specified by the user or selected by *select_Cvine.m*, *select_Cvine_akt.m* or *select_Cvine_corrcoeff.m*. If the user has specified the C-vine a priori, the ordering of the data matrix of observations is key to run the estimation algorithm: the first column will be the root of the first tree, the second column will be the root of the second tree given the variable in the first column, the third column will be the root in the third tree given the variables in the two first columns, etc.
+
+Full estimation or estimation with truncation can be performed; the estimation is performed edge-by-edge in each tree level, which allows to employ paraellel computation for each tree vine level: see Section 3.3 of Poignard and Fermanian (2019). The truncation level is user-specified: for a given "level" set as input in *dynamic_vine.m* or *dynamic_npvine.m*, the algorithm estimates the partial correlation processes up to "level". 
 
 - *corr2partial_Cvine.m*: performs the mapping from the classic correlation matrix to the partial correlation matrix, where the partial correlation structure, i.e., the sets of conditioning and conditioned variables are given by the C-vine structure, which is deduced from the ordering given in the columns of the data matrix of observations
 - *partial2corr_Cvine*: performs the mapping from the partial correlation matrix to the classic correlation matrix, where the partial correlation structure, i.e., the sets of conditioning and conditioned variables are given by the C-vine structure, which is deduced from the ordering given in the columns of the data matrix of observations
