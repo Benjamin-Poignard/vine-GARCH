@@ -2,9 +2,11 @@
 
 Matlab implementation of the vine GARCH model (C-vine, parametric and non-parametric innovations) based on the papers:
 
-*Dynamic asset correlations based on vines*, by Benjamin Poignard and Jean-David Fermanian, 2019, Econometric Theory. Link: https://doi.org/10.1017/S026646661800004X
+*Dynamic asset correlations based on vines*, by Benjamin Poignard and Jean-David Fermanian, 2019, Econometric Theory. 
+Link: https://doi.org/10.1017/S026646661800004X
 
-*Model-based vs. agnostic methods for the prediction of time-varying covariance matrices*, by Jean-David Fermanian, Benjamin Poignard and Panos Xidonas, 2024, Annals of Operations Research. Link: https://doi.org/10.1007/s10479-024-06238-4
+*Model-based vs. agnostic methods for the prediction of time-varying covariance matrices*, by Jean-David Fermanian, Benjamin Poignard and Panos Xidonas, 2024, Annals of Operations Research. 
+Link: https://doi.org/10.1007/s10479-024-06238-4
 
 Alternative variance-covariance models are implemented: 
 - the scalar DCC model: both full likelihood and composite-likelihood methods are implemented in the second-step objective function. The latter method is based on contiguous overlapping pairs, which builds upon C. Pakel, N. Shephard, K. Sheppard and R.F. Engle (2021) and should be used when the dimension is large (i.e., larger than 200, 300, 400). The DCC-GARCH code builds upon the MFE toolbox of K. Sheppard, https://www.kevinsheppard.com/code/matlab/mfe-toolbox/
