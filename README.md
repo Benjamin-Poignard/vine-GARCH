@@ -2,10 +2,10 @@
 
 Matlab implementation of the vine GARCH model (C-vine, parametric and non-parametric innovations) based on the papers:
 
-*Dynamic asset correlations based on vines*, by Benjamin Poignard and Jean-David Fermanian, 2019, Econometric Theory. 
+*Dynamic asset correlations based on vines*, by Benjamin Poignard and Jean-David Fermanian, 2019, #Econometric Theory. 
 Link: https://doi.org/10.1017/S026646661800004X
 
-*Model-based vs. agnostic methods for the prediction of time-varying covariance matrices*, by Jean-David Fermanian, Benjamin Poignard and Panos Xidonas, 2024, Annals of Operations Research. 
+*Model-based vs. agnostic methods for the prediction of time-varying covariance matrices*, by Jean-David Fermanian, Benjamin Poignard and Panos Xidonas, 2024, #Annals of Operations Research. 
 Link: https://doi.org/10.1007/s10479-024-06238-4
 
 Alternative variance-covariance models are implemented: 
